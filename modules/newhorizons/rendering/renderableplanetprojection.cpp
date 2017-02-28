@@ -625,22 +625,22 @@ void RenderablePlanetProjection::render(const RenderData& data) {
     else if (_heightMapTexture.state == TextureState::Multires) {
         units[iTexUnit].activate();
         _heightMapTexture.multires[0]->bind();
-        _programObject->setUniform("heightTexture_multires0", units[iTexUnit]);
+        _programObject->setUniform("heightTexture_multires[0]", units[iTexUnit]);
         ++iTexUnit;
         
         units[iTexUnit].activate();
         _heightMapTexture.multires[1]->bind();
-        _programObject->setUniform("heightTexture_multires1", units[iTexUnit]);
+        _programObject->setUniform("heightTexture_multires[1]", units[iTexUnit]);
         ++iTexUnit;
         
         units[iTexUnit].activate();
         _heightMapTexture.multires[2]->bind();
-        _programObject->setUniform("heightTexture_multires2", units[iTexUnit]);
+        _programObject->setUniform("heightTexture_multires[2]", units[iTexUnit]);
         ++iTexUnit;
         
         units[iTexUnit].activate();
         _heightMapTexture.multires[3]->bind();
-        _programObject->setUniform("heightTexture_multires3", units[iTexUnit]);
+        _programObject->setUniform("heightTexture_multires[3]", units[iTexUnit]);
         ++iTexUnit;
     }
     

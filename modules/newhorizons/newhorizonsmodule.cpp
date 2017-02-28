@@ -38,7 +38,9 @@
 #include <openspace/rendering/renderable.h>
 #include <openspace/util/factorymanager.h>
 
+#include <ghoul/filesystem/filesystem>
 #include <ghoul/misc/assert.h>
+#include <ghoul/opengl/shaderpreprocessor.h>
 
 namespace openspace {
 
@@ -47,6 +49,10 @@ NewHorizonsModule::NewHorizonsModule()
 {}
 
 void NewHorizonsModule::internalInitialize() {
+    ghoul::opengl::ShaderPreprocessor::addIncludePath(
+        absPath("${MODULE_NEWHORIZONS}/shaders")
+    );
+
     ImageSequencer::initialize();
 
     FactoryManager::ref().addFactory(

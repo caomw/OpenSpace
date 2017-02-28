@@ -76,10 +76,12 @@ private:
     std::unique_ptr<ghoul::opengl::ProgramObject> _fboProgramObject;
 
     enum class TextureState {
-        Unknown,
-        None,
-        Single,
-        Multires
+        // The values for the state must be synchronized with the
+        // renderablePlanetTexture.hglsl file
+        Single = 0,
+        Multires = 1,
+        None = 2,
+        Unknown = 3
     };
     
     struct Texture {
@@ -98,7 +100,7 @@ private:
     properties::FloatProperty _debugProjectionTextureRotation;
 
     std::unique_ptr<planetgeometry::PlanetGeometry> _geometry;
-    
+
     glm::vec2 _camScaling;
     glm::vec3 _up;
     glm::mat4 _transform;

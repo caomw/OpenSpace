@@ -25,6 +25,7 @@
 #version __CONTEXT__
 
 #include "PowerScaling/powerScaling_vs.hglsl"
+#include "renderablePlanetTexture.hglsl"
 
 layout(location = 0) in vec4 in_position;
 layout(location = 1) in vec2 in_st;
@@ -41,9 +42,8 @@ uniform mat4 modelViewProjectionTransform;
 //uniform mat4 ViewProjection;
 //uniform mat4 ProjectorMatrix;
 
-uniform bool _hasHeightMap;
+uniform Texture heightTexture;
 uniform float _heightExaggeration;
-uniform sampler2D heightTexture;
 
 void main() {
     vs_st = in_st;
@@ -54,8 +54,15 @@ void main() {
     vs_normal = normalize(modelTransform * vec4(in_normal,0));
     
 
-    if (_hasHeightMap) {
-        float height = texture(heightTexture, in_st).r;
+    if (heightTexture.type != TEXTURE_MODE_NONE) {
+        float height;
+        if (heightTexture.type == TEXTURE_MODE_SINGLE) {
+            height = texture(heightTexture.single, vs_st).r;
+        } 
+        else {
+            height = sampleTexture(heightTexture, vs_st).r;
+        }
+
         vec3 displacementDirection = (normalize(tmp.xyz));
         float displacementFactor = height * _heightExaggeration / 750.0;
         tmp.xyz = tmp.xyz + displacementDirection * displacementFactor;

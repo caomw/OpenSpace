@@ -570,7 +570,6 @@ void RenderablePlanetProjection::render(const RenderData& data) {
     _programObject->setUniform("modelViewProjectionTransform",
         data.camera.projectionMatrix() * glm::mat4(modelViewTransform));
 
-    _programObject->setUniform("_hasHeightMap", _heightMapTexture.state != TextureState::None);
     _programObject->setUniform("_heightExaggeration", _heightExaggeration);
     _programObject->setUniform("_projectionFading", _projectionComponent.projectionFading());
 
@@ -587,60 +586,67 @@ void RenderablePlanetProjection::render(const RenderData& data) {
     _programObject->setUniform("projectionTexture", units[iTexUnit]);
     ++iTexUnit;
     
+    _programObject->setUniform(
+        "baseTexture.type",
+        std::underlying_type_t<TextureState>(_baseTexture.state)
+    );
     if (_baseTexture.state == TextureState::Single) {
         units[iTexUnit].activate();
         _baseTexture.single->bind();
-        _programObject->setUniform("baseTexture", units[iTexUnit]);
+        _programObject->setUniform("baseTexture.single", units[iTexUnit]);
         ++iTexUnit;
     }
     else {
         units[iTexUnit].activate();
         _baseTexture.multires[0]->bind();
-        _programObject->setUniform("baseTexture_multires0", units[iTexUnit]);
+        _programObject->setUniform("baseTexture.multires0", units[iTexUnit]);
         ++iTexUnit;
 
         units[iTexUnit].activate();
         _baseTexture.multires[1]->bind();
-        _programObject->setUniform("baseTexture_multires1", units[iTexUnit]);
+        _programObject->setUniform("baseTexture.multires1", units[iTexUnit]);
         ++iTexUnit;
 
-        units[iTexUnit].activate();
+         units[iTexUnit].activate();
         _baseTexture.multires[2]->bind();
-        _programObject->setUniform("baseTexture_multires2", units[iTexUnit]);
+        _programObject->setUniform("baseTexture.multires2", units[iTexUnit]);
         ++iTexUnit;
 
         units[iTexUnit].activate();
         _baseTexture.multires[3]->bind();
-        _programObject->setUniform("baseTexture_multires3", units[iTexUnit]);
+        _programObject->setUniform("baseTexture.multires3", units[iTexUnit]);
         ++iTexUnit;
     }
 
-    
+    _programObject->setUniform(
+        "heightTexture.type",
+        std::underlying_type_t<TextureState>(_heightMapTexture.state)
+    );
     if (_heightMapTexture.state == TextureState::Single) {
         units[iTexUnit].activate();
         _heightMapTexture.single->bind();
-        _programObject->setUniform("heightTexture", units[iTexUnit]);
+        _programObject->setUniform("heightTexture.single", units[iTexUnit]);
         ++iTexUnit;
     }
     else if (_heightMapTexture.state == TextureState::Multires) {
         units[iTexUnit].activate();
         _heightMapTexture.multires[0]->bind();
-        _programObject->setUniform("heightTexture_multires[0]", units[iTexUnit]);
+        _programObject->setUniform("heightTexture.multires0", units[iTexUnit]);
         ++iTexUnit;
         
         units[iTexUnit].activate();
         _heightMapTexture.multires[1]->bind();
-        _programObject->setUniform("heightTexture_multires[1]", units[iTexUnit]);
+        _programObject->setUniform("heightTexture.multires1", units[iTexUnit]);
         ++iTexUnit;
         
         units[iTexUnit].activate();
         _heightMapTexture.multires[2]->bind();
-        _programObject->setUniform("heightTexture_multires[2]", units[iTexUnit]);
+        _programObject->setUniform("heightTexture.multires2", units[iTexUnit]);
         ++iTexUnit;
         
         units[iTexUnit].activate();
         _heightMapTexture.multires[3]->bind();
-        _programObject->setUniform("heightTexture_multires[3]", units[iTexUnit]);
+        _programObject->setUniform("heightTexture.multires3", units[iTexUnit]);
         ++iTexUnit;
     }
     
@@ -686,10 +692,11 @@ bool RenderablePlanetProjection::loadTextures() {
             );
             if (tex) {
                 // @CLEANUP:  Check if this conversion is still necessary ---abock
-                ghoul::opengl::convertTextureFormat(
-                    *tex, Texture::Format::RGB
-                );
+                //ghoul::opengl::convertTextureFormat(
+                //    *tex, Texture::Format::RGB
+                //);
                 tex->uploadTexture();
+                //tex->setWrapping(ghoul::opengl::Texture::WrappingMode::Clamp);
                 tex->setFilter(Texture::FilterMode::Linear);
             }
             return tex;

@@ -64,17 +64,36 @@ private:
 
     ProjectionComponent _projectionComponent;
 
-    properties::StringProperty _colorTexturePath;
-    properties::StringProperty _heightMapTexturePath;
+    properties::StringProperty _colorTexturePathSingle;
+    std::array<properties::StringProperty, 4> _colorTexturePathMultires;
+    
+    properties::StringProperty _heightMapTexturePathSingle;
+    std::array<properties::StringProperty, 4> _heightMapTexturePathMultires;
 
     properties::IntProperty _rotation;
 
     std::unique_ptr<ghoul::opengl::ProgramObject> _programObject;
     std::unique_ptr<ghoul::opengl::ProgramObject> _fboProgramObject;
 
-    std::unique_ptr<ghoul::opengl::Texture> _baseTexture;
-    std::unique_ptr<ghoul::opengl::Texture> _heightMapTexture;
+    enum class TextureState {
+        Unknown,
+        None,
+        Single,
+        Multires
+    };
+    
+    struct Texture {
+        std::unique_ptr<ghoul::opengl::Texture> single;
+        std::array<std::unique_ptr<ghoul::opengl::Texture>, 4> multires;
 
+        TextureState state;
+        
+        bool isValid() const;
+        int nTextures() const;
+    };
+    Texture _baseTexture;
+    Texture _heightMapTexture;
+    
     properties::FloatProperty _heightExaggeration;
     properties::FloatProperty _debugProjectionTextureRotation;
 

@@ -92,7 +92,35 @@ Documentation RenderablePlanetProjection::Documentation() {
             },
             {
                 keyColorTexture,
-                new StringVerifier,
+                new OrVerifier(
+                    new StringVerifier,
+                    new TableVerifier({
+                        {
+                            "1",
+                            new StringVerifier,
+                            "Upper left corner of the 2x2 texture map",
+                            Optional::No
+                        },
+                        {
+                            "2",
+                            new StringVerifier,
+                            "Upper right corner of the 2x2 texture map",
+                            Optional::No
+                        },
+                        {
+                            "3",
+                            new StringVerifier,
+                            "Lower left corner of the 2x2 texture map",
+                            Optional::No
+                        },
+                        {
+                            "4",
+                            new StringVerifier,
+                            "Lower right corner of the 2x2 texture map",
+                            Optional::No
+                        }
+                    })
+                ),
                 "The path to the base color texture that is used on the planet prior to "
                 "any image projection. The path can use tokens of the form '${...}' or "
                 "be specified relative to the directory of the mod file.",
@@ -110,18 +138,92 @@ Documentation RenderablePlanetProjection::Documentation() {
         }
     };
 }
+    
+bool RenderablePlanetProjection::Texture::isValid() const {
+    switch (state) {
+        case TextureState::Unknown:
+            return false;
+        case TextureState::None:
+            return true;
+        case TextureState::Single:
+            return single != nullptr;
+        case TextureState::Multires:
+            return multires[0] != nullptr && multires[1] != nullptr &&
+                   multires[2] != nullptr && multires[3] != nullptr;
+        default:
+            ghoul_assert(false, "Missing case label");
+    }
+}
+    
+int RenderablePlanetProjection::Texture::nTextures() const {
+    switch (state) {
+        case TextureState::Unknown:
+        case TextureState::None:
+            return 0;
+        case TextureState::Single:
+            return 1;
+        case TextureState::Multires:
+            return 4;
+        default:
+            ghoul_assert(false, "Missing case label");
+    }
+}
 
 RenderablePlanetProjection::RenderablePlanetProjection(const ghoul::Dictionary& dictionary)
     : Renderable(dictionary)
-    , _colorTexturePath("planetTexture", "RGB Texture")
-    , _heightMapTexturePath("heightMap", "Heightmap Texture")
+    , _colorTexturePathSingle("planetTexture", "Single RGB Texture")
+    , _colorTexturePathMultires({
+        properties::StringProperty(
+            "planetTextureMultires1",
+            "Upper left corner of Multires color texture"
+        ),
+        properties::StringProperty(
+            "planetTextureMultires2",
+            "Upper right corner of Multires color texture"
+        ),
+        properties::StringProperty(
+            "planetTextureMultires3",
+            "Lower left corner of Multires color texture"
+        ),
+        properties::StringProperty(
+            "planetTextureMultires4",
+            "Lower right corner of Multires color texture"
+        )
+    })
+    , _heightMapTexturePathMultires({
+        properties::StringProperty(
+            "heightMapMultires1",
+            "Upper left corner of Multires heightmap texture"
+        ),
+        properties::StringProperty(
+            "heightMapMultires2",
+            "Upper right corner of Multires heightmap texture"
+        ),
+        properties::StringProperty(
+            "heightMapMultires3",
+            "Lower left corner of Multires heightmap texture"
+        ),
+        properties::StringProperty(
+            "heightMapMultires4",
+            "Lower right corner of Multires heightmap texture"
+        )
+    })
+    , _heightMapTexturePathSingle("heightMap", "Heightmap Texture")
     , _rotation("rotation", "Rotation", 0, 0, 360)
     , _heightExaggeration("heightExaggeration", "Height Exaggeration", 1.f, 0.f, 100.f)
     , _debugProjectionTextureRotation("debug.projectionTextureRotation", "Projection Texture Rotation", 0.f, 0.f, 360.f)
     , _programObject(nullptr)
     , _fboProgramObject(nullptr)
-    , _baseTexture(nullptr)
-    , _heightMapTexture(nullptr)
+    , _baseTexture({
+        nullptr,
+        { nullptr, nullptr, nullptr, nullptr },
+        TextureState::Unknown
+    })
+    , _heightMapTexture({
+        nullptr,
+        { nullptr, nullptr, nullptr, nullptr },
+        TextureState::Unknown
+    })
     , _capture(false)
 {
     documentation::testSpecificationAndThrow(
@@ -147,18 +249,44 @@ RenderablePlanetProjection::RenderablePlanetProjection(const ghoul::Dictionary& 
 
     _projectionComponent.initialize(dictionary.value<ghoul::Dictionary>(keyProjection));
 
-    // TODO: textures need to be replaced by a good system similar to the geometry as soon
-    // as the requirements are fixed (ab)
-    std::string texturePath = "";
-    success = dictionary.getValue("Textures.Color", texturePath);
-    if (success){
-        _colorTexturePath = absPath(texturePath); 
+    // Get either the single texture from the dictionary or get the 2x2 multires version
+    // depending on the type of the stored value
+    if (dictionary.hasKeyAndValue<std::string>(keyColorTexture)) {
+        _baseTexture.state = TextureState::Single;
+        
+        _colorTexturePathSingle = absPath(dictionary.value<std::string>(keyColorTexture));
     }
-
-    std::string heightMapPath = "";
-    success = dictionary.getValue("Textures.Height", heightMapPath);
-    if (success)
-        _heightMapTexturePath = absPath(heightMapPath);
+    else if (dictionary.hasKeyAndValue<ghoul::Dictionary>(keyColorTexture)) {
+        _baseTexture.state = TextureState::Multires;
+        
+        ghoul::Dictionary d = dictionary.value<ghoul::Dictionary>(keyColorTexture);
+        
+        _colorTexturePathMultires[0] = absPath(d.value<std::string>("1"));
+        _colorTexturePathMultires[1] = absPath(d.value<std::string>("2"));
+        _colorTexturePathMultires[2] = absPath(d.value<std::string>("3"));
+        _colorTexturePathMultires[3] = absPath(d.value<std::string>("4"));
+    }
+    
+    // Similar to the color map, get either the single texture from the dictionary or get
+    // the 2x2 multires version depending on the type of the stored value
+    if (dictionary.hasKeyAndValue<std::string>(keyHeightTexture)) {
+        _heightMapTexture.state = TextureState::Single;
+        
+        _heightMapTexturePathSingle = absPath(
+            dictionary.value<std::string>(keyHeightTexture)
+        );
+    }
+    else if (dictionary.hasKeyAndValue<ghoul::Dictionary>(keyHeightTexture)) {
+        _heightMapTexture.state = TextureState::Multires;
+        
+        ghoul::Dictionary d = dictionary.value<ghoul::Dictionary>(keyHeightTexture);
+        
+        _heightMapTexturePathMultires[0] = absPath(d.value<std::string>("1"));
+        _heightMapTexturePathMultires[1] = absPath(d.value<std::string>("2"));
+        _heightMapTexturePathMultires[2] = absPath(d.value<std::string>("3"));
+        _heightMapTexturePathMultires[3] = absPath(d.value<std::string>("4"));
+    }
+    
 
     glm::vec2 radius = glm::vec2(1.0, 9.0);
     dictionary.getValue(keyRadius, radius);
@@ -167,11 +295,31 @@ RenderablePlanetProjection::RenderablePlanetProjection(const ghoul::Dictionary& 
     addPropertySubOwner(_geometry.get());
     addPropertySubOwner(_projectionComponent);
 
-    addProperty(_colorTexturePath);
-    _colorTexturePath.onChange(std::bind(&RenderablePlanetProjection::loadTextures, this));
+    auto loadTex = [this](){ loadTextures(); };
+    
+    addProperty(_colorTexturePathSingle);
+    _colorTexturePathSingle.onChange(loadTex);
+    
+    addProperty(_colorTexturePathMultires[0]);
+    _colorTexturePathMultires[0].onChange(loadTex);
+    addProperty(_colorTexturePathMultires[1]);
+    _colorTexturePathMultires[1].onChange(loadTex);
+    addProperty(_colorTexturePathMultires[2]);
+    _colorTexturePathMultires[2].onChange(loadTex);
+    addProperty(_colorTexturePathMultires[3]);
+    _colorTexturePathMultires[3].onChange(loadTex);
+    
+    addProperty(_heightMapTexturePathSingle);
+    _heightMapTexturePathSingle.onChange(loadTex);
 
-    addProperty(_heightMapTexturePath);
-    _heightMapTexturePath.onChange(std::bind(&RenderablePlanetProjection::loadTextures, this));
+    addProperty(_heightMapTexturePathMultires[0]);
+    _heightMapTexturePathMultires[0].onChange(loadTex);
+    addProperty(_heightMapTexturePathMultires[1]);
+    _heightMapTexturePathMultires[1].onChange(loadTex);
+    addProperty(_heightMapTexturePathMultires[2]);
+    _heightMapTexturePathMultires[2].onChange(loadTex);
+    addProperty(_heightMapTexturePathMultires[3]);
+    _heightMapTexturePathMultires[3].onChange(loadTex);
 
     addProperty(_heightExaggeration);
     addProperty(_debugProjectionTextureRotation);
@@ -228,7 +376,20 @@ bool RenderablePlanetProjection::initialize() {
 
 bool RenderablePlanetProjection::deinitialize() {
     _projectionComponent.deinitialize();
-    _baseTexture = nullptr;
+    _baseTexture.state = TextureState::Unknown;
+    _baseTexture.single = nullptr;
+    _baseTexture.multires[0] = nullptr;
+    _baseTexture.multires[1] = nullptr;
+    _baseTexture.multires[2] = nullptr;
+    _baseTexture.multires[3] = nullptr;
+
+    _heightMapTexture.state = TextureState::Unknown;
+    _heightMapTexture.single = nullptr;
+    _heightMapTexture.multires[0] = nullptr;
+    _heightMapTexture.multires[1] = nullptr;
+    _heightMapTexture.multires[2] = nullptr;
+    _heightMapTexture.multires[3] = nullptr;
+
     _geometry = nullptr;
 
     glDeleteVertexArrays(1, &_quad);
@@ -242,7 +403,8 @@ bool RenderablePlanetProjection::deinitialize() {
     return true;
 }
 bool RenderablePlanetProjection::isReady() const {
-    return _geometry && _programObject && _baseTexture && _projectionComponent.isReady();
+    return _geometry && _programObject && _baseTexture.isValid() &&
+        _heightMapTexture.isValid() && _projectionComponent.isReady();
 }
 
 void RenderablePlanetProjection::imageProjectGPU(
@@ -408,7 +570,7 @@ void RenderablePlanetProjection::render(const RenderData& data) {
     _programObject->setUniform("modelViewProjectionTransform",
         data.camera.projectionMatrix() * glm::mat4(modelViewTransform));
 
-    _programObject->setUniform("_hasHeightMap", _heightMapTexture != nullptr);
+    _programObject->setUniform("_hasHeightMap", _heightMapTexture.state != TextureState::None);
     _programObject->setUniform("_heightExaggeration", _heightExaggeration);
     _programObject->setUniform("_projectionFading", _projectionComponent.projectionFading());
 
@@ -416,19 +578,70 @@ void RenderablePlanetProjection::render(const RenderData& data) {
 
     //setPscUniforms(*_programObject.get(), data.camera, data.position);
     
-    ghoul::opengl::TextureUnit unit[3];
-    unit[0].activate();
-    _baseTexture->bind();
-    _programObject->setUniform("baseTexture", unit[0]);
+    const int nTexUnits = 1 + _baseTexture.nTextures() + _heightMapTexture.nTextures();
+    std::vector<ghoul::opengl::TextureUnit> units(nTexUnits);
 
-    unit[1].activate();
+    int iTexUnit = 0;
+    units[iTexUnit].activate();
     _projectionComponent.projectionTexture().bind();
-    _programObject->setUniform("projectionTexture", unit[1]);
+    _programObject->setUniform("projectionTexture", units[iTexUnit]);
+    ++iTexUnit;
+    
+    if (_baseTexture.state == TextureState::Single) {
+        units[iTexUnit].activate();
+        _baseTexture.single->bind();
+        _programObject->setUniform("baseTexture", units[iTexUnit]);
+        ++iTexUnit;
+    }
+    else {
+        units[iTexUnit].activate();
+        _baseTexture.multires[0]->bind();
+        _programObject->setUniform("baseTexture_multires0", units[iTexUnit]);
+        ++iTexUnit;
 
-    if (_heightMapTexture) {
-        unit[2].activate();
-        _heightMapTexture->bind();
-        _programObject->setUniform("heightTexture", unit[2]);
+        units[iTexUnit].activate();
+        _baseTexture.multires[1]->bind();
+        _programObject->setUniform("baseTexture_multires1", units[iTexUnit]);
+        ++iTexUnit;
+
+        units[iTexUnit].activate();
+        _baseTexture.multires[2]->bind();
+        _programObject->setUniform("baseTexture_multires2", units[iTexUnit]);
+        ++iTexUnit;
+
+        units[iTexUnit].activate();
+        _baseTexture.multires[3]->bind();
+        _programObject->setUniform("baseTexture_multires3", units[iTexUnit]);
+        ++iTexUnit;
+    }
+
+    
+    if (_heightMapTexture.state == TextureState::Single) {
+        units[iTexUnit].activate();
+        _heightMapTexture.single->bind();
+        _programObject->setUniform("heightTexture", units[iTexUnit]);
+        ++iTexUnit;
+    }
+    else if (_heightMapTexture.state == TextureState::Multires) {
+        units[iTexUnit].activate();
+        _heightMapTexture.multires[0]->bind();
+        _programObject->setUniform("heightTexture_multires0", units[iTexUnit]);
+        ++iTexUnit;
+        
+        units[iTexUnit].activate();
+        _heightMapTexture.multires[1]->bind();
+        _programObject->setUniform("heightTexture_multires1", units[iTexUnit]);
+        ++iTexUnit;
+        
+        units[iTexUnit].activate();
+        _heightMapTexture.multires[2]->bind();
+        _programObject->setUniform("heightTexture_multires2", units[iTexUnit]);
+        ++iTexUnit;
+        
+        units[iTexUnit].activate();
+        _heightMapTexture.multires[3]->bind();
+        _programObject->setUniform("heightTexture_multires3", units[iTexUnit]);
+        ++iTexUnit;
     }
     
     _geometry->render();
@@ -465,28 +678,56 @@ void RenderablePlanetProjection::update(const UpdateData& data) {
 
 bool RenderablePlanetProjection::loadTextures() {
     using ghoul::opengl::Texture;
-    _baseTexture = nullptr;
-    if (_colorTexturePath.value() != "") {
-        _baseTexture = ghoul::io::TextureReader::ref().loadTexture(_colorTexturePath);
-        if (_baseTexture) {
-            ghoul::opengl::convertTextureFormat(*_baseTexture, Texture::Format::RGB);
-            _baseTexture->uploadTexture();
-            _baseTexture->setFilter(Texture::FilterMode::Linear);
+    
+    auto loadAndUploadTexture = [](const std::string& file) -> std::unique_ptr<Texture> {
+        if (!file.empty()) {
+            auto tex = ghoul::io::TextureReader::ref().loadTexture(
+                file
+            );
+            if (tex) {
+                // @CLEANUP:  Check if this conversion is still necessary ---abock
+                ghoul::opengl::convertTextureFormat(
+                    *tex, Texture::Format::RGB
+                );
+                tex->uploadTexture();
+                tex->setFilter(Texture::FilterMode::Linear);
+            }
+            return tex;
         }
-    }
-
-    _heightMapTexture = nullptr;
-    if (_heightMapTexturePath.value() != "") {
-        _heightMapTexture = ghoul::io::TextureReader::ref().loadTexture(_heightMapTexturePath);
-        if (_heightMapTexture) {
-            ghoul::opengl::convertTextureFormat(*_heightMapTexture, Texture::Format::RGB);
-            _heightMapTexture->uploadTexture();
-            _heightMapTexture->setFilter(Texture::FilterMode::Linear);
+        else {
+            return nullptr;
         }
+    };
+    
+    
+    
+    if (_baseTexture.state == TextureState::Single) {
+        _baseTexture.single = loadAndUploadTexture(_colorTexturePathSingle);
     }
-
-    return _baseTexture != nullptr;
-
+    else {
+        ghoul_assert(
+            _baseTexture.state == TextureState::Multires,
+            "Strange base texture state in RenderablePlanetProjection"
+        );
+        
+        _baseTexture.multires[0] = loadAndUploadTexture(_colorTexturePathMultires[0]);
+        _baseTexture.multires[1] = loadAndUploadTexture(_colorTexturePathMultires[1]);
+        _baseTexture.multires[2] = loadAndUploadTexture(_colorTexturePathMultires[2]);
+        _baseTexture.multires[3] = loadAndUploadTexture(_colorTexturePathMultires[3]);
+    }
+    
+    if (_heightMapTexture.state == TextureState::Single) {
+        _heightMapTexture.single = loadAndUploadTexture(_heightMapTexturePathSingle);
+    }
+    else if (_heightMapTexture.state == TextureState::Multires) {
+        _heightMapTexture.multires[0] = loadAndUploadTexture(_heightMapTexturePathMultires[0]);
+        _heightMapTexture.multires[1] = loadAndUploadTexture(_heightMapTexturePathMultires[1]);
+        _heightMapTexture.multires[2] = loadAndUploadTexture(_heightMapTexturePathMultires[2]);
+        _heightMapTexture.multires[3] = loadAndUploadTexture(_heightMapTexturePathMultires[3]);
+    }
+    
+    /// @ CLEANUP:  Make this a void function ---abock
+    return true;
 }
 
 }  // namespace openspace

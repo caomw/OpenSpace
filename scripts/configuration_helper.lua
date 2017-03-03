@@ -24,9 +24,11 @@ function sgct.makeConfig(config) end
 -- fullScreen: Whether the application should run in exclusive full screen [example: fullScreen=true] {default: false}
 -- border: Whether the application should have window decorations (aka. border) [example: border=false] {default: true}
 -- monitor: Determines the monitor on which the application is started [example: monitor=2] {default: 0}
+-- shared: Determines whether the contents of the window should be shared using the SPOUT library [example: shared=true] {default: false}
 
 -- Expert settings:
--- name: The name of the window [example: window="Foobar"] {defualt: "OpenSpace"}
+-- name: The name of the window [example: window="Foobar"] {default: "OpenSpace"}
+-- tags: A list of string tags that are passed to the window [example: tags ={"GUI"}] {default: {}}
 -- vsync: Whether the rendering speed is locked to the refreshrate [example: vsync=true] {default: false}
 -- refreshRate: If vsync is enabled, this is the target framerate [example: refreshRate=30] {default: infinity}
 -- stereo: Select the stereo rendering mode as supported by SGCT [example: stereo='anaglyph_red_cyan'] {default: 'none'}
@@ -56,9 +58,11 @@ function sgct.config.single(arg) end
 -- fullScreen: Whether the application should run in exclusive full screen [example: fullScreen=true] {default: false}
 -- border: Whether the application should have window decorations (aka. border) [example: border=false] {default: true}
 -- monitor: Determines the monitor on which the application is started [example: monitor=2] {default: 0}
+-- shared: Determines whether the contents of the window should be shared using the SPOUT library [example: shared=true] {default: false}
 
 -- Expert settings:
 -- name: The name of the window [example: window="Foobar"] {defualt: "OpenSpace"}
+-- tags: A list of string tags that are passed to the window [example: tags ={"GUI"}] {default: {}}
 -- vsync: Whether the rendering speed is locked to the refreshrate [example: vsync=true] {default: false}
 -- refreshRate: If vsync is enabled, this is the target framerate [example: refreshRate=30] {default: infinity}
 -- stereo: Select the stereo rendering mode as supported by SGCT [example: stereo='anaglyph_red_cyan'] {default: 'none'}
@@ -81,13 +85,15 @@ function sgct.config.single(arg) end
 -- sgct.config.fisheye(msaa=1) -> 1280x720 resolution without multisampling
 function sgct.config.fisheye(arg) end
 
+function sgct.config.cube(arg) end
+
 --[[
 ########################################################################################## 
                             Internal helper functions
 ########################################################################################## 
 ]]--
 
-function generateSingleViewport(down, up, left, right)
+function generateSingleViewportFOV(down, up, left, right)
     return
 [[
 <Viewport>
@@ -97,6 +103,23 @@ function generateSingleViewport(down, up, left, right)
         <FOV down="]]..down..[[" left="]]..left..[[" right="]]..right..[[" up="]]..up..[[" />
         <Orientation heading="0.0" pitch="0.0" roll="0.0" />
     </PlanarProjection>
+</Viewport>
+]]
+end
+
+
+
+function generateSingleViewport(lowerLeft, upperLeft, upperRight)
+    return
+[[
+<Viewport>
+    <Pos x="0.0" y="0.0" />
+    <Size x="1.0" y="1.0" />
+    <Projectionplane>
+        <Pos x="]] .. lowerLeft[1] .. [[" y="]] .. lowerLeft[2] .. [[" z="]] .. lowerLeft[3] .. [[" />
+        <Pos x="]] .. upperLeft[1] .. [[" y="]] .. upperLeft[2] .. [[" z="]] .. upperLeft[3] .. [[" />
+        <Pos x="]] .. upperRight[1] .. [[" y="]] .. upperRight[2] .. [[" z="]] .. upperRight[3] .. [[" />
+    </Projectionplane>
 </Viewport>
 ]]
 end
@@ -152,6 +175,96 @@ end
 
 
 function generateWindow(arg)
+    assert(
+        type(arg["res"]) == "table" or type(arg["res"]) == "nil",
+        "res must be a table or nil"
+    )
+    if (type(arg["res"]) == "table") then
+        assert(type(arg["res"][1]) == "number", "res[1] must be a number")
+        assert(type(arg["res"][2]) == "number", "res[2] must be a number")
+    end
+
+    assert(
+        type(arg["windowSize"]) == "table" or type(arg["windowSize"]) == "nil",
+        "windowSize must be a table or nil"
+    )
+    if (type(arg["windowSize"]) == "table") then
+        assert(type(arg["windowSize"][1]) == "number", "windowPos[1] must be a number")
+        assert(type(arg["windowSize"][2]) == "number", "windowPos[2] must be a number")
+        assert(
+            type(arg[1]) == "nil" and type(arg[2]) == "nil",
+            "Only windowSize or the first and second arguments can be set. Not both"
+        )
+    end
+
+    assert(
+        type(arg["windowPos"]) == "table" or type(arg["windowPos"]) == "nil",
+        "windowPos must be a table or nil"
+    )
+    if (type(arg["windowPos"]) == "table") then
+        assert(type(arg["windowPos"][1]) == "number", "windowPos[1] must be a number")
+        assert(type(arg["windowPos"][2]) == "number", "windowPos[2] must be a number")
+    end
+
+    assert(
+        type(arg["name"]) == "string" or type(arg["name"]) == "nil",
+        "name must be a string or nil"
+    )
+
+    assert(
+        type(arg["fullScreen"]) == "boolean" or type(arg["fullScreen"]) == "nil",
+        "fullScreen must be a boolean or nil"
+    )
+
+    assert(
+        type(arg["monitor"]) == "number" or type(arg["monitor"]) == "nil",
+        "monitor must be a number or nil"
+    )
+
+    assert(
+        type(arg["border"]) == "boolean" or type(arg["border"]) == "nil",
+        "border must be a boolean or nil"
+    )
+
+    assert(
+        type(arg["msaa"]) == "number" or type(arg["msaa"]) == "nil",
+        "msaa must be a number or nil"
+    )
+
+    if arg["fullScreen"] == nil then
+        arg["fullScreen"] = false
+    end
+
+    if arg["monitor"] == nil then
+        arg["monitor"] = 0
+    end
+
+    if arg["msaa"] == nil then
+        arg["msaa"] = 8
+    end
+
+    if arg["border"] == nil then
+        arg["border"] = true
+    end
+
+    if arg["name"] == nil then
+        arg["name"] = "OpenSpace"
+    end
+
+    if arg["stereo"] == nil then
+        arg["stereo"] = "none"
+    end
+
+    if arg["windowPos"] == nil then
+        arg["windowPos"] = { 50, 50 }
+    end
+
+    if arg["windowSize"] == nil then
+        arg["windowSize"] = { 1280, 720 }
+    end
+
+
+
     local resolution = ""
     if arg["res"] then
         arg["res"][1] = arg["res"][1] or arg["windowSize"][1]
@@ -163,6 +276,11 @@ function generateWindow(arg)
 ]]
     end
 
+    local tags = ""
+    if arg["tags"] then
+        tags = table.concat(arg["tags"], ",")
+    end
+
     return
 [[
     <Window 
@@ -171,6 +289,7 @@ function generateWindow(arg)
         border="]] .. tostring(arg["border"]) .. [["
         name="]] .. arg["name"] .. [["
         monitor="]] .. arg["monitor"] .. [["
+        tags="]] .. tags .. [["
     >
         <Stereo type="]] .. arg["stereo"] .. [[" />
         <Size x="]] .. arg["windowSize"][1] .. [[" y="]] .. arg["windowSize"][2] .. [[" />
@@ -187,6 +306,29 @@ end
 
 
 function generateUser(arg)
+    assert(
+        type(arg["eyeSep"]) == "number" or type(arg["eyeSep"]) == "nil",
+        "eyeSep must be a number or nil"
+    )
+
+    assert(
+        type(arg["eyePos"]) == "table" or type(arg["eyePos"]) == "nil",
+        "eyePos must be a table or nil"
+    )
+    if (type(arg["eyePos"]) == "table") then
+        assert(type(arg["eyePos"][1]) == "number", "eyePos[1] must be a number")
+        assert(type(arg["eyePos"][2]) == "number", "eyePos[2] must be a number")
+        assert(type(arg["eyePos"][3]) == "number", "eyePos[3] must be a number")
+    end
+
+    if arg["eyeSep"] == nil then
+        arg["eyeSep"] = 0.065
+    end
+
+    if arg["eyePos"] == nil then
+        arg["eyePos"] = { 0.0, 0.0, 0.0 }
+    end
+
     return [[
     <User eyeSeparation="]] .. arg["eyeSep"] .. [[">
         <Pos
@@ -201,6 +343,41 @@ end
 
 
 function generateScene(arg)
+    assert(
+        type(arg["scene"]) == "table" or type(arg["scene"]) == "nil",
+        "scene must be a table or nil"
+    )
+    if type(arg["scene"]) == "table" then
+        local offset = arg["scene"]["offset"]
+        assert(
+            type(offset) == "table" or type(offset) == "nil",
+            "scene['offset'] must be a table or nil"
+        )
+        if type(offset) == "table" then
+            assert(type(offset["x"]) == "number", "scene['offset']['x'] must be a number")
+            assert(type(offset["y"]) == "number", "scene['offset']['y'] must be a number")
+            assert(type(offset["z"]) == "number", "scene['offset']['z'] must be a number")
+        end
+
+        local orientation = arg["scene"]["orientation"]
+        assert(
+            type(orientation) == "table" or type(orientation) == "nil",
+            "scene['orientation] must be a table or nil"
+        )
+        if type(orientation) == "table" then
+            assert(type(orientation["yaw"]) == "number", "orientation['yaw'] must be a number")
+            assert(type(orientation["pitch"]) == "number", "orientation['pitch'] must be a number")
+            assert(type(orientation["roll"]) == "number", "orientation['roll'] must be a number")
+        end
+
+        local scale = arg["scene"]["scale"]
+        assert(
+            type(scale) == "number" or type(scale) == "nil",
+            "scene['scale'] must be a number or nil"
+        )
+    end
+
+
     local scene = arg["scene"]
 
     if scene == nil then
@@ -292,6 +469,15 @@ end
 
 
 function generateCluster(arg)
+    assert(
+        type(arg["sgctDebug"]) == "boolean" or type(arg["sgctDebug"]) == "nil",
+        "sgctDebug must be a boolean or nil"
+    )
+
+    if arg["sgctDebug"] == nil then
+        arg["sgctDebug"] = false
+    end
+
     return [[
 <?xml version="1.0" ?>
 <Cluster
@@ -299,13 +485,13 @@ function generateCluster(arg)
     externalControlPort="20500"
     debug="]] .. tostring(arg["sgctDebug"]) .. [["
 >
-]]..arg["settings"]..[[
-]]..arg["scene"]..[[
+]].. (arg["settings"] or "") ..[[
+]].. (arg["scene"] or "") ..[[
     <Node address="localhost" port="20401">
 ]].. arg["window"] ..[[
     </Node>
 ]] .. arg["user"] .. [[
-]] .. arg["capture"] .. [[
+]] .. (arg["capture"] or "") .. [[
 </Cluster>
 ]]
 end
@@ -324,60 +510,19 @@ function generateSingleWindowConfig(arg)
     )
 
     assert(
-        type(arg["res"]) == "table" or type(arg["res"]) == "nil",
-        "res must be a table or nil"
+        type(arg["shared"]) == "boolean" or type(arg["shared"]) == "nil",
+        "shared must be a boolean or nil"
     )
-    if (type(arg["res"]) == "table") then
-        assert(type(arg["res"][1]) == "number", "res[1] must be a number")
-        assert(type(arg["res"][2]) == "number", "res[2] must be a number")
+
+    assert(
+        type(arg["tags"]) == "table" or type(arg["tags"]) == "nil",
+        "tags must be a table or nil"
+    )
+    if (type(arg["tags"]) == "table") and (next(arg["tags"]) ~= nil) then
+        for index, value in ipairs(arg["tags"]) do
+            assert(type(value) == "string", "Each tag must be a string")
+        end
     end
-
-    assert(
-        type(arg["windowSize"]) == "table" or type(arg["windowSize"]) == "nil",
-        "windowSize must be a table or nil"
-    )
-    if (type(arg["windowSize"]) == "table") then
-        assert(type(arg["windowSize"][1]) == "number", "windowPos[1] must be a number")
-        assert(type(arg["windowSize"][2]) == "number", "windowPos[2] must be a number")
-        assert(
-            type(arg[1]) == "nil" and type(arg[2]) == "nil",
-            "Only windowSize or the first and second arguments can be set. Not both"
-        )
-    end
-
-    assert(
-        type(arg["windowPos"]) == "table" or type(arg["windowPos"]) == "nil",
-        "windowPos must be a table or nil"
-    )
-    if (type(arg["windowPos"]) == "table") then
-        assert(type(arg["windowPos"][1]) == "number", "windowPos[1] must be a number")
-        assert(type(arg["windowPos"][2]) == "number", "windowPos[2] must be a number")
-    end
-
-    assert(
-        type(arg["name"]) == "string" or type(arg["name"]) == "nil",
-        "name must be a string or nil"
-    )
-
-    assert(
-        type(arg["fullScreen"]) == "boolean" or type(arg["fullScreen"]) == "nil",
-        "fullScreen must be a boolean or nil"
-    )
-
-    assert(
-        type(arg["monitor"]) == "number" or type(arg["monitor"]) == "nil",
-        "monitor must be a number or nil"
-    )
-
-    assert(
-        type(arg["border"]) == "boolean" or type(arg["border"]) == "nil",
-        "border must be a boolean or nil"
-    )
-
-    assert(
-        type(arg["msaa"]) == "number" or type(arg["msaa"]) == "nil",
-        "msaa must be a number or nil"
-    )
 
     assert(
         type(arg["vsync"]) == "boolean" or type(arg["vsync"]) == "nil",
@@ -393,60 +538,6 @@ function generateSingleWindowConfig(arg)
         type(arg["stereo"]) == "string" or type(arg["stereo"]) == "nil",
         "stereo must be a boolean or nil"
     )
-
-    assert(
-        type(arg["eyeSep"]) == "number" or type(arg["eyeSep"]) == "nil",
-        "eyeSep must be a number or nil"
-    )
-
-    assert(
-        type(arg["eyePos"]) == "table" or type(arg["eyePos"]) == "nil",
-        "eyePos must be a table or nil"
-    )
-    if (type(arg["eyePos"]) == "table") then
-        assert(type(arg["eyePos"][1]) == "number", "eyePos[1] must be a number")
-        assert(type(arg["eyePos"][2]) == "number", "eyePos[2] must be a number")
-        assert(type(arg["eyePos"][3]) == "number", "eyePos[3] must be a number")
-    end
-
-    assert(
-        type(arg["sgctDebug"]) == "boolean" or type(arg["sgctDebug"]) == "nil",
-        "sgctDebug must be a boolean or nil"
-    )
-
-    assert(
-        type(arg["scene"]) == "table" or type(arg["scene"]) == "nil",
-        "scene must be a table or nil"
-    )
-    if type(arg["scene"]) == "table" then
-        local offset = arg["scene"]["offset"]
-        assert(
-            type(offset) == "table" or type(offset) == "nil",
-            "scene['offset'] must be a table or nil"
-        )
-        if type(offset) == "table" then
-            assert(type(offset["x"]) == "number", "scene['offset']['x'] must be a number")
-            assert(type(offset["y"]) == "number", "scene['offset']['y'] must be a number")
-            assert(type(offset["z"]) == "number", "scene['offset']['z'] must be a number")
-        end
-
-        local orientation = arg["scene"]["orientation"]
-        assert(
-            type(orientation) == "table" or type(orientation) == "nil",
-            "scene['orientation] must be a table or nil"
-        )
-        if type(orientation) == "table" then
-            assert(type(orientation["yaw"]) == "number", "orientation['yaw'] must be a number")
-            assert(type(orientation["pitch"]) == "number", "orientation['pitch'] must be a number")
-            assert(type(orientation["roll"]) == "number", "orientation['roll'] must be a number")
-        end
-
-        local scale = arg["scene"]["scale"]
-        assert(
-            type(scale) == "number" or type(scale) == "nil",
-            "scene['scale'] must be a number or nil"
-        )
-    end
 
     assert(
         type(arg["capture"]) == "table" or type(arg["capture"]) == "nil",
@@ -483,51 +574,22 @@ function generateSingleWindowConfig(arg)
         arg["vsync"] = false
     end
 
-    if arg["fullScreen"] == nil then
-        arg["fullScreen"] = false
+    if arg["tags"] == nil then
+        arg["tags"] = {}
     end
 
-    if arg["monitor"] == nil then
-        arg["monitor"] = 0
+    if (not arg["windowSize"]) and (arg[1] ~= nil) and (arg[2] ~= nil) then
+        print("A")
+        arg["windowSize"] = { arg[1], arg[2] }
+        arg[1] = nil
+        arg[2] = nil
     end
 
-    if arg["msaa"] == nil then
-        arg["msaa"] = 8
+     if arg["shared"] then
+        local t = arg["tags"]
+        t[#t + 1] = "Spout"
     end
 
-    if arg["border"] == nil then
-        arg["border"] = true
-    end
-
-    if arg["name"] == nil then
-        arg["name"] = "OpenSpace"
-    end
-
-    if arg["stereo"] == nil then
-        arg["stereo"] = "none"
-    end
-
-    if arg["windowPos"] == nil then
-        arg["windowPos"] = { 50, 50 }
-    end
-
-    if arg["eyeSep"] == nil then
-        arg["eyeSep"] = 0.065
-    end
-
-    if arg["eyePos"] == nil then
-        arg["eyePos"] = { 0.0, 0.0, 0.0 }
-    end
-
-    if arg["sgctDebug"] == nil then
-        arg["sgctDebug"] = false
-    end
-
-    if not arg["windowSize"] then
-        arg["windowSize"] = {}
-        arg["windowSize"][1] = arg[1] or 1280
-        arg["windowSize"][2] = arg[2] or 720
-    end
 
     arg["scene"] = generateScene(arg)
     arg["settings"] = generateSettings(arg)
@@ -568,7 +630,7 @@ function sgct.config.single(arg)
     end
     
     arg["fov"] = arg["fov"] or { down = 16.875, up = 16.875, left = 30.0, right = 30.0 }
-    arg["viewport"] = generateSingleViewport(
+    arg["viewport"] = generateSingleViewportFOV(
         arg["fov"]["down"],
         arg["fov"]["up"], 
         arg["fov"]["left"],
@@ -664,4 +726,77 @@ function sgct.config.fisheye(arg)
     )
 
     return sgct.makeConfig(generateSingleWindowConfig(arg))
+end
+
+function sgct.config.cube(arg)
+    function getCubeWindow(location, res, size)
+        local pos
+        local lowerLeft
+        local upperLeft
+        local upperRight
+        if location == 'left' then
+            pos = { 0, size[2] }
+            lowerLeft =     { -1, -1,  1 }
+            upperLeft =     { -1,  1,  1 }
+            upperRight =    { -1,  1, -1 }
+        elseif location == 'right' then
+            pos = { 2 * size[1], size[2] }
+            lowerLeft =     {  1, -1, -1 }
+            upperLeft =     {  1,  1, -1 }
+            upperRight =    {  1,  1,  1 }
+        elseif location == 'up' then
+            pos = { size[1], 0 }
+            lowerLeft =     {  1,  1, -1 }
+            upperLeft =     {  1,  1,  1 }
+            upperRight =    { -1,  1,  1 }
+        elseif location == 'down' then
+            pos = { size[1], 2 * size[2] }
+            lowerLeft =     { -1, -1,  1 }
+            upperLeft =     { -1, -1, -1 }
+            upperRight =    {  1, -1, -1 }
+        elseif location == 'back' then
+            pos = { 2 * size[1], 2 * size[2] }
+            lowerLeft =     {  1, -1,  1 }
+            upperLeft =     {  1,  1,  1 }
+            upperRight =    { -1,  1,  1 }
+        elseif location == 'front' then
+            pos = { size[1], size[2] }
+            lowerLeft =     { -1, -1, -1 }
+            upperLeft =     { -1,  1, -1 }
+            upperRight =    {  1,  1, -1 }
+        end
+
+        arg = {}
+        arg["msaa"] = 8
+        arg["border"] = false
+        arg["name"] = "OpenSpace_" .. location
+        arg["tags"] = { "Spout" }
+        arg["windowSize"] = size
+        arg["windowPos"] = pos
+        arg["res"] = { res, res }
+        arg["viewport"] = generateSingleViewport(lowerLeft, upperLeft, upperRight)
+
+        return generateWindow(arg)
+    end
+
+    function getControlWindow(down, up, left, right)
+        arg = {}
+        arg["viewport"] = generateSingleViewportFOV(down, up, left, right)
+        return generateWindow(arg)
+    end
+
+
+    res = 1024
+    size = {640, 360}
+    
+    arg["scene"] = generateScene(arg)
+    arg["settings"] = generateSettings(arg)
+    arg["window"] = getControlWindow(16.875, 16.875, 30.0, 30.0) .. getCubeWindow('front', res, size) .. getCubeWindow('back', res, size) .. 
+        getCubeWindow('left', res, size) .. getCubeWindow('right', res, size) .. 
+        getCubeWindow('up', res, size) .. getCubeWindow('down', res, size)
+
+    arg["user"] = generateUser(arg)
+    arg["capture"] = generateCapture(arg)
+
+    return sgct.makeConfig(generateCluster(arg))
 end

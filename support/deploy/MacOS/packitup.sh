@@ -5,7 +5,7 @@
 # <insert LICENSE info here>
 ######################################################################
 
-echo "* MacOS/packitup.sh invoked as $0"
+echo "* MacOS/packitup.sh: create tarball "
 
 ##
 # Start in $WORKSPACE
@@ -32,12 +32,13 @@ if [ -z "$Major$minor$patch" ]; then
   exit 2
 fi  
 
-tarfile="OpenSpace-${Major}-${minor}-${patch}.tgz"
+tarfile="OpenSpace-${Major}.${minor}.${patch}.tgz"
 
 ##
 # Create deploy/OpenSpace to hold everything:
 
 cd $WORKSPACE
+[ -d deploy ] && /bin/rm -rf deploy
 mkdir -p deploy/OpenSpace
 
 cd deploy/OpenSpace
@@ -86,5 +87,13 @@ cd ..
 # Now pack it up in a .gz archive
 
 cd $WORKSPACE/deploy
+
+# Remove pre-existing file
+[ -f $tarfile ] && rm $tarfile
+
 echo "* Creating compressed tar archive..."
-tar czvf $tarfile  OpenSpace
+tar czf $tarfile  OpenSpace
+echo "* Created tarball: "
+ls -lh $tarfile
+
+# How do we upload it to the server?

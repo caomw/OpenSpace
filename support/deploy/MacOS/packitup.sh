@@ -32,7 +32,17 @@ if [ -z "$Major$minor$patch" ]; then
   exit 2
 fi  
 
-tarfile="OpenSpace-${Major}.${minor}.${patch}.tgz"
+
+archiveName="OpenSpace-${Major}.${minor}.${patch}"
+
+# For now, at least, add BUILD_ID onto tarball name
+if [ ! -z "$BUILD_ID" ]; then
+  archiveName="$archiveName-${BUILD_ID}"
+fi
+
+tarfile="$archiveName.tgz"
+zipfile="$archiveName.zip"
+
 
 ##
 # Create deploy/OpenSpace to hold everything:
@@ -95,5 +105,10 @@ echo "* Creating compressed tar archive..."
 tar czf $tarfile  OpenSpace
 echo "* Created tarball: "
 ls -lh $tarfile
+
+echo  "* Creating ZIP archive..."
+zip -rq $zipfile OpenSpace
+echo "* Created ZIP file:"
+ls -lh $zipfile
 
 # How do we upload it to the server?

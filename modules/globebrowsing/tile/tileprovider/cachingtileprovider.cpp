@@ -37,6 +37,7 @@ namespace {
     const char* KeyDoPreProcessing = "DoPreProcessing";
     const char* KeyMinimumPixelSize = "MinimumPixelSize";
     const char* KeyFilePath = "FilePath";
+    const char* KeyBasePath = "BasePath";
     const char* KeyCacheSize = "CacheSize";
     const char* KeyFlushInterval = "FlushInterval";
 }
@@ -84,8 +85,11 @@ CachingTileProvider::CachingTileProvider(const ghoul::Dictionary& dictionary)
             framesUntilRequestFlush);
     }
 
+    std::string basePath;
+    dictionary.getValue(KeyBasePath, basePath);
+
     // Initialize instance variables
-    auto tileDataset = std::make_shared<TileDataset>(filePath, config);
+    auto tileDataset = std::make_shared<TileDataset>(filePath, config, basePath);
 
     // only one thread per provider supported atm
     // (GDAL does not handle multiple threads for a single dataset very well

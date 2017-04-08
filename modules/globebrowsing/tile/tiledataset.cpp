@@ -123,13 +123,13 @@ const PixelRegion TileDataset::padding = PixelRegion(
     
 bool TileDataset::GdalHasBeenInitialized = false;
 
-TileDataset::TileDataset(const std::string& gdalDatasetDesc, const Configuration& config)
+TileDataset::TileDataset(const std::string& gdalDatasetDesc, const Configuration& config, const std::string& baseDirectory)
     : _config(config)
     , hasBeenInitialized(false)
 {
-    _initData = { "",  gdalDatasetDesc, config.minimumTilePixelSize, config.dataType };
+    _initData = { baseDirectory, gdalDatasetDesc, config.minimumTilePixelSize, config.dataType };
+    //_initData.initDirectory = CPLGetCurrentDir();
     ensureInitialized();
-    _initData.initDirectory = CPLGetCurrentDir();
 }
 
 void TileDataset::reset() {
@@ -248,12 +248,23 @@ GDALDataset* TileDataset::gdalDataset(const std::string& gdalDatasetDesc) {
     GDALDataset* dataset = (GDALDataset *)GDALOpen(gdalDatasetDesc.c_str(), GA_ReadOnly);
     if (!dataset) {
         using namespace ghoul::filesystem;
-        std::string correctedPath = FileSystem::ref().pathByAppendingComponent(
-            _initData.initDirectory, gdalDatasetDesc
-        );
+        std::string correctedPath = absPath(gdalDatasetDesc);
+            
+            //FileSystem::ref().pathByAppendingComponent(
+            //_initData.initDirectory, gdalDatasetDesc
+        //);
         dataset = (GDALDataset *)GDALOpen(correctedPath.c_str(), GA_ReadOnly);
+
         if (!dataset) {
-            throw ghoul::RuntimeError("Failed to load dataset:\n" + gdalDatasetDesc);
+            correctedPath = FileSystem::ref().pathByAppendingComponent(
+                _initData.initDirectory,
+                gdalDatasetDesc
+            );
+            dataset = (GDALDataset *)GDALOpen(correctedPath.c_str(), GA_ReadOnly);
+
+            if (!dataset) {
+                throw ghoul::RuntimeError("Failed to load dataset:\n" + gdalDatasetDesc);
+            }
         }
     }
 

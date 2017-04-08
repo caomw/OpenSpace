@@ -28,6 +28,7 @@
 
 #include <ghoul/filesystem/filesystem>
 #include <ghoul/logging/logmanager.h>
+#include <ghoul/misc/onscopeexit.h>
 
 #include "cpl_minixml.h"
 #include <fmt/format.h>
@@ -39,6 +40,7 @@ namespace {
     const char* KeyDoPreProcessing = "DoPreProcessing";
     const char* KeyMinimumPixelSize = "MinimumPixelSize";
     const char* KeyFilePath = "FilePath";
+    const char* KeyBasePath = "BasePath";
     const char* KeyCacheSize = "CacheSize";
     const char* KeyFlushInterval = "FlushInterval";
 }
@@ -73,6 +75,18 @@ TemporalTileProvider::TemporalTileProvider(const ghoul::Dictionary& dictionary)
         std::istreambuf_iterator<char>(in),
         (std::istreambuf_iterator<char>())
     );
+
+    //ghoul::filesystem::Directory pwd = FileSys.currentDirectory();
+    //OnExit([pwd]() { FileSys.setCurrentDirectory(pwd); });
+
+    std::string previousFilePath = _initDict.value<std::string>(KeyFilePath);
+    _initDict.setValue<std::string>(
+        KeyBasePath,
+        ghoul::filesystem::File(_datasetFile).directoryName()
+    );
+
+    
+    //FileSys.setCurrentDirectory(ghoul::filesystem::File(_datasetFile).directoryName());
     _gdalXmlTemplate = consumeTemporalMetaData(xml);
     std::shared_ptr<TileProvider> tileProvider = getTileProvider();
     ghoul_assert(tileProvider, "No tile provider found");
@@ -351,9 +365,11 @@ double TimeQuantizer::parseTimeResolutionStr(const std::string& resoltutionStr) 
 
 bool TimeQuantizer::quantize(Time& t, bool clamp) const {
     double unquantized = t.j2000Seconds();
+    std::string b = t.UTC();
     if (_timerange.includes(unquantized)) {
         double quantized = std::floor((unquantized - _timerange.start) / _resolution) * _resolution + _timerange.start;
         t.setTime(quantized);
+        std::string a = t.UTC();
         return true;
     }
     else if (clamp) {
@@ -361,6 +377,7 @@ bool TimeQuantizer::quantize(Time& t, bool clamp) const {
         clampedTime = std::max(clampedTime, _timerange.start);
         clampedTime = std::min(clampedTime, _timerange.end);
         t.setTime(clampedTime);
+        std::string a = t.UTC();
         return true;
     }
     else {

@@ -65,7 +65,7 @@ public:
     * \param minimumPixelSize - minimum number of pixels per side per tile requested 
     * \param datatype         - datatype for storing pixel data in requested tile
     */
-    TileDataset(const std::string& gdalDatasetDesc, const Configuration& config);
+    TileDataset(const std::string& gdalDatasetDesc, const Configuration& config, const std::string& baseDirectory = "");
 
     ~TileDataset();
 

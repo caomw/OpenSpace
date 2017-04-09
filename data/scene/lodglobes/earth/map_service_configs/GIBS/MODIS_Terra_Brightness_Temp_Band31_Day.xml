@@ -18,7 +18,7 @@
     <BandsCount>4</BandsCount>
     <MaxConnections>5</MaxConnections>
     <Cache>
-        <Path>./GDAL_Cache/MODIS_Terra_Brightness_Temp_Band31_Day</Path>
+        <Path>${BASE_PATH}/GDAL_Cache/MODIS_Terra_Brightness_Temp_Band31_Day</Path>
         <Depth>4</Depth>
         <Extension>.png</Extension>
     </Cache>

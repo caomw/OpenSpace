@@ -43,6 +43,9 @@ namespace {
     const char* KeyBasePath = "BasePath";
     const char* KeyCacheSize = "CacheSize";
     const char* KeyFlushInterval = "FlushInterval";
+
+    const char* KeyPreCacheStartTime = "PreCacheStartTime";
+    const char* KeyPreCacheEndTime = "PreCacheEndTime";
 }
 
 namespace openspace {
@@ -91,6 +94,22 @@ TemporalTileProvider::TemporalTileProvider(const ghoul::Dictionary& dictionary)
     std::shared_ptr<TileProvider> tileProvider = getTileProvider();
     ghoul_assert(tileProvider, "No tile provider found");
     _defaultTile = tileProvider->getDefaultTile();
+
+    const bool hasStart = dictionary.hasKeyAndValue<std::string>(KeyPreCacheStartTime);
+    const bool hasEnd = dictionary.hasKeyAndValue<std::string>(KeyPreCacheEndTime);
+    if (hasStart && hasEnd) {
+        const std::string start = dictionary.value<std::string>(KeyPreCacheStartTime);
+        const std::string end = dictionary.value<std::string>(KeyPreCacheEndTime);
+        std::vector<Time> preCacheTimes = _timeQuantizer.quantized(
+            Time(Time::convertTime(start)),
+            Time(Time::convertTime(end))
+        );
+
+        LINFO("Preloading: " << _datasetFile);
+        for (Time& t : preCacheTimes) {
+            getTileProvider(t);
+        }
+    }
 }
 
 std::string TemporalTileProvider::consumeTemporalMetaData(const std::string& xml) {
@@ -147,7 +166,7 @@ std::string TemporalTileProvider::consumeTemporalMetaData(const std::string& xml
         CPLXMLNode* gdalNode = CPLSearchXMLNode(node, "FilePath");
         gdalDescription = std::string(gdalNode->psChild->pszValue);
     }
-        
+
     return gdalDescription;
 }
 
@@ -365,11 +384,11 @@ double TimeQuantizer::parseTimeResolutionStr(const std::string& resoltutionStr) 
 
 bool TimeQuantizer::quantize(Time& t, bool clamp) const {
     double unquantized = t.j2000Seconds();
-    std::string b = t.UTC();
+    //std::string b = t.UTC();
     if (_timerange.includes(unquantized)) {
         double quantized = std::floor((unquantized - _timerange.start) / _resolution) * _resolution + _timerange.start;
         t.setTime(quantized);
-        std::string a = t.UTC();
+        //std::string a = t.UTC();
         return true;
     }
     else if (clamp) {
@@ -377,13 +396,36 @@ bool TimeQuantizer::quantize(Time& t, bool clamp) const {
         clampedTime = std::max(clampedTime, _timerange.start);
         clampedTime = std::min(clampedTime, _timerange.end);
         t.setTime(clampedTime);
-        std::string a = t.UTC();
+        //std::string a = t.UTC();
         return true;
     }
     else {
         return false;
     }
 }
+
+std::vector<Time> TimeQuantizer::quantized(const Time& start, const Time& end) const {
+    Time s = start;
+    quantize(s, true);
+
+    Time e = end;
+    quantize(e, true);
+
+    const double startSeconds = s.j2000Seconds();
+    const double endSeconds = e.j2000Seconds();
+    const double delta = endSeconds - startSeconds;
+
+    ghoul_assert(int(delta) % _resolution == 0, "Quantization error");
+    const int nSteps = delta / _resolution;
+
+    std::vector<Time> result(nSteps + 1);
+    for (int i = 0; i <= nSteps; ++i) {
+        result[i].setTime(startSeconds + i * _resolution, false);
+    }
+
+    return result;
+}
+
 
 } // namespace tileprovider
 } // namespace globebrowsing

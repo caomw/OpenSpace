@@ -62,43 +62,71 @@ return {
                         LevelTileProviders = {
                             {
                                 MaxLevel = 7, 
-                                TileProvider = { FilePath = "map_service_configs/GIBS/VIIRS_SNPP_CorrectedReflectance_TrueColor.xml", }, 
+                                TileProvider = { 
+                                    FilePath = "map_service_configs/GIBS/VIIRS_SNPP_CorrectedReflectance_TrueColor.xml",
+                                    PreCacheLevel = 4
+                                }, 
                             },
                             {
                                 MaxLevel = 22, 
-                                TileProvider = { FilePath = "map_service_configs/ESRI/ESRI_Imagery_World_2D.wms" },
+                                TileProvider = {
+                                    FilePath = "map_service_configs/ESRI/ESRI_Imagery_World_2D.wms",
+                                    PreCacheLevel = 4
+                                },
                             },
                         },
                         Enabled = true,
                     },
                     {
                         Name = "ESRI Imagery World",
-                        FilePath = "map_service_configs/ESRI/ESRI_Imagery_World_2D.wms"
+                        FilePath = "map_service_configs/ESRI/ESRI_Imagery_World_2D.wms",
+
                     },
                     {
                         Type = "Temporal",
                         Name = "Temporal VIIRS SNPP",
                         FilePath = "map_service_configs/GIBS/Temporal_VIIRS_SNPP_CorrectedReflectance_TrueColor.xml",
+                        PreCacheLevel = 4,
+                        PreCacheStartTime = "2017 JAN 01",
+                        PreCacheEndTime = "2017 APR 10",
+
                     },
                     {
                         Type = "Temporal",
                         Name = "Temporal_GHRSST_L4_MUR_Sea_Surface_Temperature",
                         FilePath = "map_service_configs/GIBS/Temporal_GHRSST_L4_MUR_Sea_Surface_Temperature.xml",
                     },
-                    -- {
-                    --     Type = "SingleImage",
-                    --     Name = "Debug Tiles",
-                    --     FilePath = "../../debugglobe/textures/test_tile.png",
-                    -- },
                     {
-                        Name = "BMNG",
-                        FilePath = "map_service_configs/Utah/Bmng.wms"
-                    }
+                        Type = "Temporal",
+                        Name = "Temporal Earth at Night",
+                        FilePath = "map_service_configs/GIBS/Temporal_VIIRS_CityLights.xml"
+                    },
                     -- {
                     --     Type = "Temporal",
-                    --     Name = "NOAA RT",
-                    --     FilePath = "map_service_configs/other/noaa_rt.xml"
+                    --     Name = "Seawifs",
+                    --     FilePath = "E:/Carter_SOS/precip_3600.xml",
+                    --     Enabled = true
+                    -- },
+                    -- {
+                    --     Type = "Temporal",
+                    --     Name = "Temporal Test",
+                    --     FilePath = "map_service_configs/other/temporal_test.xml",
+                    --     Enabled = true
+                    -- },
+                    -- -- {
+                    -- --     Type = "SingleImage",
+                    -- --     Name = "Debug Tiles",
+                    -- --     FilePath = "../../debugglobe/textures/test_tile.png",
+                    -- -- },
+                    -- {
+                    --     Name = "BMNG",
+                    --     FilePath = "map_service_configs/Utah/Bmng.wms"
                     -- }
+                    -- -- {
+                    -- --     Type = "Temporal",
+                    -- --     Name = "NOAA RT",
+                    -- --     FilePath = "map_service_configs/other/noaa_rt.xml"
+                    -- -- }
                 },
                 GrayScaleLayers = { },
                 GrayScaleColorOverlays = { },
@@ -108,11 +136,11 @@ return {
                         FilePath = "map_service_configs/GIBS/VIIRS_CityLights_2012.xml",
                         Enabled = true,
                     },
-                    {
-                        Type = "Temporal",
-                        Name = "Temporal Earth at Night",
-                        FilePath = "map_service_configs/GIBS/Temporal_VIIRS_CityLights.xml"
-                    }
+                    -- {
+                    --     Type = "Temporal",
+                    --     Name = "Temporal Earth at Night",
+                    --     FilePath = "map_service_configs/GIBS/Temporal_VIIRS_CityLights.xml"
+                    -- }
                 },
                 WaterMasks = {
                     {
@@ -120,10 +148,10 @@ return {
                         FilePath = "map_service_configs/GIBS/MODIS_Water_Mask.xml",
                         Enabled = true,
                     },
-                    {
-                        Name = "GEBCO",
-                        FilePath = "map_service_configs/Utah/Gebco.wms",
-                    }
+                    -- {
+                    --     Name = "GEBCO",
+                    --     FilePath = "map_service_configs/Utah/Gebco.wms",
+                    -- }
                 },
                 ColorOverlays = {
                     {

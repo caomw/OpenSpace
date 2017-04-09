@@ -21,7 +21,7 @@
     <ZeroBlockOnServerException>true</ZeroBlockOnServerException>
     <MaxConnections>5</MaxConnections>
     <Cache>
-        <Path>./GDAL_Cache/Coastlines</Path>
+        <Path>${BASE_PATH}/GDAL_Cache/Coastlines</Path>
         <Depth>4</Depth>
         <Extension>.png</Extension>
     </Cache>

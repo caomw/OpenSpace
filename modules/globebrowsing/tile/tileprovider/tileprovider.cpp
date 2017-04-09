@@ -79,7 +79,7 @@ ChunkTile TileProvider::getChunkTile(TileIndex tileIndex, int parents, int maxPa
         tileselector::ascendToParent(tileIndex, uvTransform);
         maxParents--;
     }
-    if(maxParents < 0){
+    if (maxParents < 0){
         return { Tile::TileUnavailable, uvTransform };
     }
     
@@ -89,7 +89,7 @@ ChunkTile TileProvider::getChunkTile(TileIndex tileIndex, int parents, int maxPa
         Tile tile = getTile(tileIndex);
         if (tile.status != Tile::Status::OK) {
             if (--maxParents < 0){
-                return{ Tile::TileUnavailable, uvTransform };
+                return { Tile::TileUnavailable, uvTransform };
             }
             tileselector::ascendToParent(tileIndex, uvTransform);
         }

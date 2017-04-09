@@ -40,6 +40,7 @@ namespace {
     const char* KeyBasePath = "BasePath";
     const char* KeyCacheSize = "CacheSize";
     const char* KeyFlushInterval = "FlushInterval";
+    const char* PreCacheLevel = "PreCacheLevel";
 }
 
 namespace openspace {
@@ -100,6 +101,17 @@ CachingTileProvider::CachingTileProvider(const ghoul::Dictionary& dictionary)
         tileDataset, threadPool);
     _tileCache = std::make_shared<TileCache>(static_cast<size_t>(cacheSize));
     _framesUntilRequestFlush = framesUntilRequestFlush;
+
+    if (dictionary.hasKeyAndValue<double>(PreCacheLevel)) {
+        const int preCacheLevel = static_cast<int>(dictionary.value<double>(PreCacheLevel));
+        for (int level = 0; level <= preCacheLevel; ++level) {
+            for (int x = 0; x <= level * 2; ++x) {
+                for (int y = 0; y <= level; ++y) {
+                    _asyncTextureDataProvider->enqueueTileIO({ x, y, level });
+                }
+            }
+        }
+    }
 }
 
 CachingTileProvider::CachingTileProvider(

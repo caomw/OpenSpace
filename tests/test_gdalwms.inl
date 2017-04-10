@@ -24,6 +24,10 @@
 
 #include "gtest/gtest.h"
 
+#ifdef WIN32
+#pragma warning(push, 0)
+#endif // WIN32
+
 #include "gdal.h"
 #include "gdal_priv.h"
 
@@ -32,6 +36,11 @@
 
 #include "cpl_conv.h"
 #include "cpl_string.h"
+
+#ifdef WIN32
+#pragma warning(pop)
+#endif // WIN32
+
 
 #include <ghoul/filesystem/filesystem>
 

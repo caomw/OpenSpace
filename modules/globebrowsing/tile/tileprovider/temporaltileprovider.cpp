@@ -427,7 +427,7 @@ std::vector<Time> TimeQuantizer::quantized(const Time& start, const Time& end) c
     const double endSeconds = e.j2000Seconds();
     const double delta = endSeconds - startSeconds;
 
-    ghoul_assert(int(delta) % _resolution == 0, "Quantization error");
+    ghoul_assert(int(delta) % int(_resolution) == 0, "Quantization error");
     const int nSteps = delta / _resolution;
 
     std::vector<Time> result(nSteps + 1);

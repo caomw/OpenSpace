@@ -28,7 +28,7 @@ namespace openspace {
 namespace globebrowsing {
 
 template <typename T>
-const T Angle<T>::PI = 3.14159265358979323846264338327950;
+const T Angle<T>::PI = T(3.14159265358979323846264338327950);
 
 template <typename T>
 const T Angle<T>::EPSILON = 1e-10; // Should depend on the typedef /eb 
@@ -70,7 +70,7 @@ Angle<T> Angle<T>::fromRadians(T rads) {
 
 template <typename T>
 Angle<T> Angle<T>::fromDegrees(T degrees) {
-    return Angle<T>(degrees * PI / 180.0);
+    return Angle<T>(T(degrees * PI / 180.0));
 }
 
 template <typename T>
@@ -89,12 +89,12 @@ T Angle<T>::asRadians() const {
 
 template <typename T>
 T Angle<T>::asDegrees() const {
-    return _radians * 180.0 / PI;
+    return static_cast<T>(_radians * 180.0 / PI);
 }
 
 template <typename T>
 T Angle<T>::asRevolutions() const {
-    return _radians / (2 * PI);
+    return static_cast<T>(_radians / (2 * PI));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -22,68 +22,17 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#include <modules/globebrowsing/tile/tiledatalayout.h>
+#ifndef __OPENSPACE_MODULE_GLOBEBROWSING___GDAL___H__
+#define __OPENSPACE_MODULE_GLOBEBROWSING___GDAL___H__
 
-#include <limits>
+#ifdef WIN32
+#pragma warning(push, 0)
+#endif // WIN32
 
-#include <ogr_featurestyle.h>
-#include <ogr_spatialref.h>
+#include <gdal_priv.h>
 
-#include <ghoul/logging/logmanager.h>
-#include <ghoul/filesystem/filesystem.h> // abspath
-#include <ghoul/misc/assert.h>
+#ifdef WIN32
+#pragma warning(pop)
+#endif // WIN32
 
-#include <modules/globebrowsing/tile/tile.h>
-#include <modules/globebrowsing/tile/tileprovider/tileprovider.h>
-
-
-#include <modules/globebrowsing/geometry/angle.h>
-
-#include <float.h>
-#include <sstream>
-#include <algorithm>
-
-#include <modules/globebrowsing/ext/gdal.h>
-#include <openspace/engine/openspaceengine.h>
-#include <openspace/engine/configurationmanager.h>
-
-#include <memory>
-#include <set>
-#include <queue>
-#include <iostream>
-#include <unordered_map>
-
-#include <ghoul/filesystem/file.h>
-#include <ghoul/opengl/texture.h>
-#include <ghoul/misc/threadpool.h>
-
-#include <modules/globebrowsing/tile/tile.h>
-#include <modules/globebrowsing/tile/tiledatatype.h>
-#include <modules/globebrowsing/tile/tiledepthtransform.h>
-#include <modules/globebrowsing/tile/pixelregion.h>
-#include <modules/globebrowsing/tile/rawtile.h>
-#include <modules/globebrowsing/tile/tilemetadata.h>
-#include <modules/globebrowsing/geometry/geodetic2.h>
-#include <modules/globebrowsing/geometry/geodeticpatch.h>
-
-namespace openspace {
-namespace globebrowsing {
-
-TileDataLayout::TileDataLayout() {}
-
-TileDataLayout::TileDataLayout(GDALDataset* dataSet, GLuint preferredGlType) {
-    using namespace tiledatatype;
-    // Assume all raster bands have the same data type
-    gdalType =preferredGlType != 0 ?
-        getGdalDataType(preferredGlType) :
-        dataSet->GetRasterBand(1)->GetRasterDataType();
-
-    glType = getOpenGLDataType(gdalType);
-    numRasters = dataSet->GetRasterCount();
-    bytesPerDatum = numberOfBytes(gdalType);
-    bytesPerPixel = bytesPerDatum * numRasters;
-    textureFormat = getTextureFormat(static_cast<int>(numRasters), gdalType);
-}
-  
-} // namespace globebrowsing
-} // namespace openspace
+#endif // __OPENSPACE_MODULE_GLOBEBROWSING___GDAL___H__

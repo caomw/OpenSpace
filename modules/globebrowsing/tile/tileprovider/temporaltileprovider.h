@@ -82,6 +82,14 @@ struct YYYY_MM_DDThh_mm_ssZ : public TimeFormat {
 };
 
 /**
+ * Stringifies OpenSpace to the format "YYYYMMDD_hhmmss"
+ * Example: 20160908_230505
+ */
+struct YYYYMMDD_hhmmss : public TimeFormat {
+    virtual std::string stringify(const Time& t) const;
+};
+
+/**
  * Static factory class for providing different TimeFormats.
  * A time format stringifier is retrieved by a name of the format.
  * See implementation of <code>init()</code> to see what time 

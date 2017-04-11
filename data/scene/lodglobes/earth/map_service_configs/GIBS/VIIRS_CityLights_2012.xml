@@ -18,7 +18,7 @@
     <BandsCount>4</BandsCount>
     <MaxConnections>5</MaxConnections>
     <Cache>
-        <Path>${BASE_PATH}/GDAL_Cache/VIIRS_CityLights_2012</Path>
+        <Path>./GDAL_Cache/VIIRS_CityLights_2012</Path>
         <Depth>4</Depth>
         <Extension>.jpg</Extension>
     </Cache>

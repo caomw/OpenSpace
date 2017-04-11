@@ -14,7 +14,7 @@
     <BandsCount>3</BandsCount>
     <MaxConnections>5</MaxConnections>
     <Cache>
-        <Path>${BASE_PATH}/GDAL_Cache/ESRI_Imagery_World_2d</Path>
+        <Path>./GDAL_Cache/ESRI_Imagery_World_2d</Path>
         <Depth>4</Depth>
         <Extension>.jpg</Extension>
     </Cache>

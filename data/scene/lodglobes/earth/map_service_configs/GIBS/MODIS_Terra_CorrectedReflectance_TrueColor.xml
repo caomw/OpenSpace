@@ -18,7 +18,7 @@
     <BandsCount>3</BandsCount>
     <MaxConnections>5</MaxConnections>
     <Cache>
-        <Path>${BASE_PATH}/GDAL_Cache/MODIS_Terra_CorrectedReflectance_TrueColor</Path>
+        <Path>./GDAL_Cache/MODIS_Terra_CorrectedReflectance_TrueColor</Path>
         <Depth>4</Depth>
         <Extension>.jpg</Extension>
     </Cache>
